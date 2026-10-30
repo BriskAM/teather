@@ -1,0 +1,3 @@
+// swift-tools-version: 5.9
+import PackageDescription
+let package = Package(name: "Kunnect", platforms: [.macOS(.v13)], products: [.executable(name: "Kunnect", targets: ["Kunnect"])], targets: [.target(name: "KunnectCore"), .target(name: "KunnectTransport", dependencies: ["KunnectCore"]), .executableTarget(name: "Kunnect", dependencies: ["KunnectCore", "KunnectTransport"]), .executableTarget(name: "KunnectChecks", dependencies: ["KunnectCore"], path: "Tests/KunnectCoreTests"), .executableTarget(name: "KunnectWireChecks", dependencies: ["KunnectCore", "KunnectTransport"], path: "Tests/KunnectWireChecks")])
