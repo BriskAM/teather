@@ -93,7 +93,7 @@ class ConnectionService : Service() {
                                 send(result ?: JSONObject().put("type", "dismissResult").put("key", event.optString("key")).put("revision", event.optString("revision")).put("result", "unavailable"))
                             }
                         }
-                    } finally { sender.cancel() }
+                    } finally { sender.cancel(); runCatching { connection.close() } }
                 }
             } catch (e: Exception) {
                 if (!currentCoroutineContext().isActive) break
