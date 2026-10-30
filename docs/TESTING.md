@@ -1,3 +1,17 @@
+# Validation — 0.2.0
+
+Added on 30 October 2026:
+
+- Scoped WebDAV tests against an Android DocumentsProvider protected by real URI grants: authentication; escaped names; depth limits and traversal/encoded-separator rejection; content/range reads; read-only denial; create/replace; interrupted upload preserving the original; chunked upload; directory creation; cross-directory move; lock enforcement and unlock; cross-host destination rejection; deletion and immediate write/share revocation.
+- **Actual macOS native WebDAV mounts backed by the Android emulator over an adb-forwarded socket:** read an Android document; verify a read-only mount rejects writes; eject; mount writable; create/read/rename/delete a file; copy a local Mac file through filesystem APIs; eject. This tests the shipped NetFS helper and Android server, not a mocked filesystem. `./scripts/test-mounted-folder.sh` reproduces it after the debug fixture APKs are installed.
+- Existing notification lifecycle, old-Mac handshake compatibility, encrypted pairing, Swift mirror/security and live TCP checks pass after the heartbeat change. Standard instrumentation reports five tests, including one optional mount-fixture test skipped outside its explicit run.
+- The DMG builds, mounts read-only, includes the signed app and `/Applications` shortcut, and carries Finder icon positions/window metadata. Its embedded app passes strict code-signature verification.
+- Debug/release builds and lint pass. UI checks cover the Files tab and optional battery prompt. No physical-phone battery percentage or runtime guarantee is claimed.
+
+The native mount test uses loopback forwarding for an isolated emulator and a synthetic pairing secret. Production Android does not permit that loopback exception. Hardware Tailscale/radio/battery conditions and native Mac notification gestures remain separate acceptance tests.
+
+---
+
 # Validation — 0.1.0
 
 Tested locally on 30 October 2026 with an Android 15/API 35 arm64 emulator and an Apple Silicon Mac. The Android app compiles against SDK 37.0 and targets API 35; minimum Android is API 28. The Mac app targets macOS 13+.
@@ -17,7 +31,7 @@ Tested locally on 30 October 2026 with an Android 15/API 35 arm64 emulator and a
 
 ## Efficiency evidence
 
-The implemented idle path has a blocking socket read and a coroutine waiting on a conflated change channel, with a 30-second heartbeat rather than a polling loop. Selected notification bursts are coalesced for 150 ms, unchanged records are omitted, application labels are cached, and unavailable-host retries back off to 30 seconds. Frame sizes, notification counts and body lengths are bounded. No app wake lock or disk notification queue is used. R8 removes unused Android code and resources in release builds.
+The implemented idle path has a blocking socket read and a coroutine waiting on a conflated change channel, with a 120-second heartbeat rather than a polling loop. Selected notification bursts are coalesced for 150 ms, unchanged records are omitted, application labels are cached, and unavailable-host retries back off to 120 seconds. Frame sizes, notification counts and body lengths are bounded. No app wake lock or disk notification queue is used. R8 removes unused Android code and resources in release builds.
 
 In one local idle observation after several minutes, the Mac app showed 0.0% CPU and approximately 50 MiB resident memory. This is a point observation, not a battery or performance guarantee. Emulator tests do not establish physical-phone battery drain, radio wakeups, or manufacturer background-process behavior.
 

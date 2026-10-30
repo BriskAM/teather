@@ -56,7 +56,10 @@ class ConnectionService : Service() {
                 connection.soTimeout = 12000
                 val ready = readFrame(input, line)
                 check(ready.optString("type") == "ready") { ready.optString("message", "Pairing failed") }
-                connection.soTimeout = 300000
+                val features = ready.optJSONArray("features")
+                val supportsFiles = features != null && (0 until features.length()).any { features.optString(it) == "fileShare" }
+                val heartbeatMillis = if (supportsFiles) 120000L else 30000L
+                connection.soTimeout = if (supportsFiles) 300000 else 75000
                 delayMs = 1000
                 BridgeState.status.value = "Connected"
                 BridgeState.changed()
@@ -66,11 +69,11 @@ class ConnectionService : Service() {
                         var lastShare = ""
                         var previous = emptyMap<String, String>()
                         while (isActive) {
-                            val changed = withTimeoutOrNull(120000) { BridgeState.changes.receive(); true } ?: false
+                            val changed = withTimeoutOrNull(heartbeatMillis) { BridgeState.changes.receive(); true } ?: false
                             if (changed) delay(150) // Fold a burst of notification updates into one batch.
                             if (BridgeState.shareDirty.getAndSet(false)) files.reconfigure()
                             val share = files.info()
-                            if (share.toString() != lastShare) { send(share); lastShare = share.toString() }
+                            if (supportsFiles && share.toString() != lastShare) { send(share); lastShare = share.toString() }
                             if (BridgeState.dirty.getAndSet(false)) {
                                 val snapshot = withContext(Dispatchers.Main) { BridgeState.listener?.snapshot() }
                                 if (snapshot != null) {

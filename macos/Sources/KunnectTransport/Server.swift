@@ -102,7 +102,7 @@ public final class BridgeServer {
             peer.authenticated = true; peer.deviceID = id; active = peer.id
             if pairedDevice.isEmpty { pairedDevice = id; DispatchQueue.main.async { self.onPair?(id) } }
             if case .hostPort(let host, _) = peer.connection.endpoint { DispatchQueue.main.async { self.onPeer?(String(describing: host)) } }
-            peer.send(["type": "ready", "version": 1]); status("Connected · \((event["name"] as? String ?? "Android").prefix(128))")
+            peer.send(["type": "ready", "version": 1, "features": ["fileShare"]]); status("Connected · \((event["name"] as? String ?? "Android").prefix(128))")
             return true
         }
         guard active == peer.id else { return false }

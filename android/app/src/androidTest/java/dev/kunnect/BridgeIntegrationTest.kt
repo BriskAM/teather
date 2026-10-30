@@ -45,7 +45,8 @@ class BridgeIntegrationTest {
                 var connection = server.accept().apply { soTimeout = 15000 }
                 var reader = connection.getInputStream().bufferedReader(); var writer = connection.getOutputStream().bufferedWriter()
                 val hello = readUntil(reader, "hello"); assertEquals(key, hello.getString("token")); assertEquals(1, hello.getInt("version"))
-                send(writer, JSONObject().put("type", "ready"))
+                send(writer, JSONObject().put("type", "ready").put("features", org.json.JSONArray().put("fileShare")))
+                assertFalse(readUntil(reader, "fileShare").getBoolean("enabled"))
                 readUntil(reader, "snapshot")
                 fixture("First message")
                 var event = readUntil(reader, "delta") { it.getJSONArray("items").length() > 0 }
@@ -92,6 +93,27 @@ class BridgeIntegrationTest {
             context.stopService(Intent(context, ConnectionService::class.java)); fixture(cancel = true)
             prefs.host = oldHost; prefs.token = oldToken; prefs.enabledApps = oldApps; prefs.hideContent = false; prefs.localOnlyApps = emptySet()
         }
+    }
+    @Test fun notificationSyncStillWorksWithOlderMacHandshake() {
+        instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        waitUntil { BridgeState.listener != null }
+        val prefs = Preferences(context)
+        val oldHost = prefs.host; val oldToken = prefs.token
+        prefs.host = "127.0.0.1"; prefs.token = "e".repeat(64)
+        try {
+            ServerSocket(41691, 4, java.net.InetAddress.getByName("127.0.0.1")).use { server ->
+                server.soTimeout = 15000
+                context.startForegroundService(Intent(context, ConnectionService::class.java))
+                server.accept().use { connection ->
+                    connection.soTimeout = 15000
+                    val reader = connection.getInputStream().bufferedReader()
+                    val writer = connection.getOutputStream().bufferedWriter()
+                    readUntil(reader, "hello")
+                    send(writer, JSONObject().put("type", "ready").put("version", 1))
+                    assertEquals("snapshot", JSONObject(reader.readLine()).getString("type"))
+                }
+            }
+        } finally { context.stopService(Intent(context, ConnectionService::class.java)); prefs.host = oldHost; prefs.token = oldToken }
     }
     @Test fun pairingKeyStoredEncryptedAndRoundTrips() {
         val prefs = Preferences(context); val old = prefs.token
