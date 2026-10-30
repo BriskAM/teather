@@ -111,7 +111,7 @@ private fun KunnectApp() {
     var dynamic by remember { mutableStateOf(prefs.dynamicColor) }
     var access by remember { mutableStateOf(false) }
     DisposableEffect(context) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) { access = context.getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(ComponentName(context, NotificationBridge::class.java)); settingsVersion++ } }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) { access = context.getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(ComponentName(context, NotificationBridge::class.java)); if (access && BridgeState.listener == null) android.service.notification.NotificationListenerService.requestRebind(ComponentName(context, NotificationBridge::class.java)); settingsVersion++ } }
         context.lifecycle.addObserver(observer)
         onDispose { context.lifecycle.removeObserver(observer) }
     }
