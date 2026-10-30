@@ -12,7 +12,7 @@ enum PairingKey {
     }
     static func regenerate() throws -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
-        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { throw NSError(domain: "Kunnect", code: 1) }
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { throw NSError(domain: "Teather", code: 1) }
         let key = bytes.map { String(format: "%02x", $0) }.joined()
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "dev.kunnect.pairing", kSecAttrAccount as String: "phone"]
         let data = Data(key.utf8)

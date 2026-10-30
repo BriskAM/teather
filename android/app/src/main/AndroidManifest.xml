@@ -7,11 +7,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent></queries>
-    <application android:label="Kunnect" android:icon="@drawable/ic_kunnect" android:theme="@style/Theme.Kunnect" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
+    <application android:label="Teather" android:icon="@drawable/ic_teather" android:theme="@style/Theme.Teather" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>
-        <service android:name=".NotificationBridge" android:label="Kunnect notification sync" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
+        <service android:name=".NotificationBridge" android:label="Teather notification sync" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter>
         </service>
         <service android:name=".ConnectionService" android:foregroundServiceType="connectedDevice" android:exported="false"/>

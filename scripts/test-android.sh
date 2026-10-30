@@ -9,6 +9,10 @@ ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
 "$ADB" -e install -r "$ROOT/android/fixture/build/outputs/apk/debug/fixture-debug.apk"
 "$ADB" -e shell pm grant dev.kunnect android.permission.POST_NOTIFICATIONS
 "$ADB" -e shell pm grant dev.kunnect.fixture android.permission.POST_NOTIFICATIONS
+# Match the explicit sideloading consent required on real Android devices.
+"$ADB" -e shell appops set dev.kunnect ACCESS_RESTRICTED_SETTINGS allow
+"$ADB" -e shell am start -n dev.kunnect/.MainActivity >/dev/null
+"$ADB" -e shell cmd notification disallow_listener dev.kunnect/.NotificationBridge
 "$ADB" -e shell cmd notification allow_listener dev.kunnect/.NotificationBridge
 RESULT="$ROOT/output/android-instrumentation.txt"
 mkdir -p "$ROOT/output"

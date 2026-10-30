@@ -24,7 +24,7 @@ class ConnectionService : Service() {
         manager.createNotificationChannel(NotificationChannel("connection", "Device connection", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 1, Intent(this, ConnectionService::class.java).setAction("stop"), PendingIntent.FLAG_IMMUTABLE)
-        startForeground(1, Notification.Builder(this, "connection").setSmallIcon(dev.kunnect.R.drawable.ic_kunnect).setContentTitle("Kunnect is running").setContentText("Keeping your Mac in sync over Tailscale").setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "Disconnect", stop).build()).build())
+        startForeground(1, Notification.Builder(this, "connection").setSmallIcon(dev.kunnect.R.drawable.ic_teather).setContentTitle("Teather is running").setContentText("Keeping your Mac in sync over Tailscale").setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "Disconnect", stop).build()).build())
         BridgeState.running.value = true
         scope.launch { files.reconfigure(); BridgeState.changed() }
         if (job?.isActive != true) job = scope.launch { connectLoop() }

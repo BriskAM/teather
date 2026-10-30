@@ -7,4 +7,4 @@ if [ ! -f "$ROOT/android/keystore.properties" ]; then
 fi
 "$ROOT/android/gradlew" -p "$ROOT/android" :app:assembleRelease :app:lintRelease
 mkdir -p "$ROOT/output"
-cp "$ROOT/android/app/build/outputs/apk/release/app-release.apk" "$ROOT/output/Kunnect-Android.apk"
+cp "$ROOT/android/app/build/outputs/apk/release/app-release.apk" "$ROOT/output/Teather-Android.apk"

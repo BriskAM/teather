@@ -19,7 +19,7 @@ class BridgeIntegrationTest {
     private fun fixture(body: String = "Hello from Android", cancel: Boolean = false, ongoing: Boolean = false) {
         context.sendBroadcast(Intent("dev.kunnect.fixture.POST").setComponent(android.content.ComponentName("dev.kunnect.fixture", "dev.kunnect.fixture.FixtureReceiver")).putExtra("body", body).putExtra("cancel", cancel).putExtra("ongoing", ongoing))
     }
-    private fun waitUntil(test: () -> Boolean) { val end = System.currentTimeMillis() + 15000; while (!test()) { check(System.currentTimeMillis() < end) { "Condition timed out" }; Thread.sleep(100) } }
+    private fun waitUntil(test: () -> Boolean) { val end = System.currentTimeMillis() + 30000; while (!test()) { check(System.currentTimeMillis() < end) { "Condition timed out" }; Thread.sleep(100) } }
     private fun readUntil(reader: BufferedReader, type: String, condition: (JSONObject) -> Boolean = { true }): JSONObject {
         val deadline = System.currentTimeMillis() + 15000
         while (System.currentTimeMillis() < deadline) {

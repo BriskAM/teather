@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 concurrency:
-  group: kunnect-${{ github.ref }}
+  group: teather-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -16,14 +16,14 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - run: swift run --package-path macos KunnectChecks
-      - run: swift run --package-path macos KunnectWireChecks
-      - run: swift build --package-path macos --product KunnectDiskChecks
+      - run: swift run --package-path macos TeatherChecks
+      - run: swift run --package-path macos TeatherWireChecks
+      - run: swift build --package-path macos --product TeatherDiskChecks
       - run: ./scripts/build-macos.sh
       - uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: output/Kunnect-macOS-arm64.dmg
+          path: output/Teather-macOS-arm64.dmg
   android:
     timeout-minutes: 15
     runs-on: ubuntu-latest

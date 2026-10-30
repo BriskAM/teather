@@ -1,3 +1,7 @@
+# Rename validation — 0.2.1
+
+Teather is the new product/project name. This update retains installed app IDs, signing and pairing storage. Validation covers both WebDAV route names, native Finder mounting through `/Teather/`, the existing notification regression suite, release APK upgrades, and the renamed Swift package and DMG build. Older screenshots and release assets remain historical records of the Kunnect name.
+
 # Validation — 0.2.0
 
 Added on 30 October 2026:

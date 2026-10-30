@@ -8,3 +8,5 @@ output/
 **/keystore.properties
 *.keystore
 *.jks
+
+**/.kotlin/

@@ -19,7 +19,7 @@ class FixtureDocuments : DocumentsProvider() {
     override fun onCreate() = true
     override fun queryRoots(projection: Array<out String>?): Cursor {
         val cols = projection ?: arrayOf(DocumentsContract.Root.COLUMN_ROOT_ID, DocumentsContract.Root.COLUMN_DOCUMENT_ID, DocumentsContract.Root.COLUMN_TITLE, DocumentsContract.Root.COLUMN_FLAGS)
-        return MatrixCursor(cols).apply { val row = newRow(); cols.forEach { col -> row.add(col, when(col) { DocumentsContract.Root.COLUMN_ROOT_ID -> "fixture"; DocumentsContract.Root.COLUMN_DOCUMENT_ID -> "root"; DocumentsContract.Root.COLUMN_TITLE -> "Kunnect Test Folder"; DocumentsContract.Root.COLUMN_FLAGS -> DocumentsContract.Root.FLAG_SUPPORTS_CREATE; else -> null }) } }
+        return MatrixCursor(cols).apply { val row = newRow(); cols.forEach { col -> row.add(col, when(col) { DocumentsContract.Root.COLUMN_ROOT_ID -> "fixture"; DocumentsContract.Root.COLUMN_DOCUMENT_ID -> "root"; DocumentsContract.Root.COLUMN_TITLE -> "Teather Test Folder"; DocumentsContract.Root.COLUMN_FLAGS -> DocumentsContract.Root.FLAG_SUPPORTS_CREATE; else -> null }) } }
     }
     private fun query(files: List<File>, projection: Array<out String>?): Cursor {
         val cols = projection ?: arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED, DocumentsContract.Document.COLUMN_FLAGS)

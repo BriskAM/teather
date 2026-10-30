@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 import UserNotifications
 import CryptoKit
-import KunnectCore
-import KunnectTransport
+import TeatherCore
+import TeatherTransport
 import ServiceManagement
 
 final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
@@ -24,6 +24,7 @@ final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelega
     @Published var mounting = false
     @Published var folderMessage = "Enable folder sharing in the Android app."
     private var phoneAddress = ""
+    private var sharePath = "/Kunnect/"
     private(set) var token = ""
     private let server = BridgeServer()
     private var mirror = NotificationMirror()
@@ -58,10 +59,10 @@ final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelega
         guard connected, !sharedFolder.isEmpty, !mounting else { return }
         if let mountedFolder { NSWorkspace.shared.open(mountedFolder); return }
         mounting = true
-        let host = phoneAddress, secret = token, readOnly = !shareWritable
+        let host = phoneAddress, secret = token, readOnly = !shareWritable, path = sharePath
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let path = try NetworkDisk.mount(host: host, secret: secret, readOnly: readOnly)
+                let path = try NetworkDisk.mount(host: host, secret: secret, readOnly: readOnly, path: path)
                 DispatchQueue.main.async { self.mounting = false; self.mountedFolder = path; NSWorkspace.shared.open(path) }
             } catch { DispatchQueue.main.async { self.mounting = false; self.lastError = error.localizedDescription } }
         }
@@ -100,6 +101,7 @@ final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelega
         if type == "fileShare" {
             sharedFolder = event["enabled"] as? Bool == true ? String((event["name"] as? String ?? "Android folder").prefix(128)) : ""
             shareWritable = event["writable"] as? Bool == true
+            sharePath = event["path"] as? String == "/Teather/" ? "/Teather/" : "/Kunnect/"
             folderMessage = sharedFolder.isEmpty ? "Enable folder sharing in the Android app." : (shareWritable ? "Read & write · remount after changing access on Android." : "Read-only · files are fetched on demand.")
             return
         }
@@ -113,7 +115,7 @@ final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelega
             if result == "protected" { lastError = "Android kept a protected notification. It was dismissed locally." }
             if result == "stale" { lastError = "A newer notification arrived; it was kept on your phone." }
         } else if type == "test" { testNotification() }
-        else if type == "unavailable" { lastError = "Enable Kunnect’s notification access on your phone." }
+        else if type == "unavailable" { lastError = "Enable Teather’s notification access on your phone." }
     }
     private func apply(_ effects: [SyncEffect]) {
         for effect in effects {
@@ -135,8 +137,8 @@ final class AppModel: NSObject, ObservableObject, UNUserNotificationCenterDelega
         }
     }
     func testNotification() {
-        let content = UNMutableNotificationContent(); content.title = "You’re connected."; content.body = "Kunnect can show notifications on this Mac."; content.subtitle = "Kunnect"
-        center.add(UNNotificationRequest(identifier: "kunnect-test", content: content, trigger: nil)) { error in if let error { DispatchQueue.main.async { self.lastError = error.localizedDescription } } }
+        let content = UNMutableNotificationContent(); content.title = "You’re connected."; content.body = "Teather can show notifications on this Mac."; content.subtitle = "Teather"
+        center.add(UNNotificationRequest(identifier: "teather-test", content: content, trigger: nil)) { error in if let error { DispatchQueue.main.async { self.lastError = error.localizedDescription } } }
     }
     func dismissAll() {
         for key in mirror.items.keys { apply(mirror.dismissLocally(key)); center.removeDeliveredNotifications(withIdentifiers: [Self.notificationID(key)]) }
@@ -175,7 +177,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 14) {
                 Image(systemName: "link").font(.system(size: 28, weight: .medium)).frame(width: 60, height: 60).background(Color.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 18))
-                VStack(alignment: .leading, spacing: 4) { Text("Kunnect").font(.largeTitle.bold()); Text("Your phone, a little closer.").foregroundStyle(.secondary) }
+                VStack(alignment: .leading, spacing: 4) { Text("Teather").font(.largeTitle.bold()); Text("Your phone, a little closer.").foregroundStyle(.secondary) }
                 Spacer()
             }
             HStack(spacing: 8) { Circle().fill(model.connected ? Color.green : Color.orange).frame(width: 7, height: 7); Text(model.status); Spacer(); Text("\(model.count) notifications").foregroundStyle(.secondary) }
@@ -207,12 +209,12 @@ struct SettingsView: View {
             GroupBox("Notifications & startup") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack { Label(model.notificationsAllowed ? "Notifications allowed" : "Notification permission needed", systemImage: model.notificationsAllowed ? "checkmark.circle" : "bell.badge"); Spacer(); Button("Allow notifications") { model.askPermission() } }
-                    Toggle("Launch Kunnect at login", isOn: Binding(get: { model.launchAtLogin }, set: { model.login($0) }))
+                    Toggle("Launch Teather at login", isOn: Binding(get: { model.launchAtLogin }, set: { model.login($0) }))
                     HStack { Button("Send test notification") { model.testNotification() }; Spacer(); Button(model.isPaused ? "Resume syncing" : "Pause syncing") { model.togglePause() } }
                 }.padding(8)
             }
             if !model.lastError.isEmpty { Text(model.lastError).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
-            HStack { Text("0.2.0 · Tailscale port 41691").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Reset pairing…") { model.resetAlert = true } }
+            HStack { Text("0.2.1 · Tailscale port 41691").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Reset pairing…") { model.resetAlert = true } }
         }
         .padding(28).frame(width: 580)
         .onAppear { model.refreshPermission(); model.refreshAddress() }
@@ -228,11 +230,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         model = AppModel()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "link", accessibilityDescription: "Kunnect")
+        statusItem.button?.image = NSImage(systemSymbolName: "link", accessibilityDescription: "Teather")
         statusItem.button?.target = self; statusItem.button?.action = #selector(showMenu)
         let content = SettingsView(model: model)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 580, height: 680), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "Kunnect"; window.contentView = NSHostingView(rootView: content); window.isReleasedWhenClosed = false; window.center()
+        window.title = "Teather"; window.contentView = NSHostingView(rootView: content); window.isReleasedWhenClosed = false; window.center()
         if !UserDefaults.standard.bool(forKey: "hasOpened") { showSettings(); UserDefaults.standard.set(true, forKey: "hasOpened") }
     }
     @objc func showMenu() {
@@ -244,7 +246,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(menu, "Settings…", #selector(showSettings), ",")
         add(menu, model.isPaused ? "Resume syncing" : "Pause syncing", #selector(pause), "")
         add(menu, "Dismiss mirrored notifications", #selector(dismissAll), "")
-        menu.addItem(NSMenuItem.separator()); add(menu, "Quit Kunnect", #selector(quit), "q")
+        menu.addItem(NSMenuItem.separator()); add(menu, "Quit Teather", #selector(quit), "q")
         statusItem.menu = menu; statusItem.button?.performClick(nil); statusItem.menu = nil
     }
     private func add(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) { let item = NSMenuItem(title: title, action: action, keyEquivalent: key); item.target = self; menu.addItem(item) }
@@ -257,7 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct KunnectMain {
+struct TeatherMain {
     static func main() {
         let application = NSApplication.shared
         let delegate = AppDelegate()

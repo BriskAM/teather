@@ -18,7 +18,7 @@ A disconnected Mac dismissal is retained in memory for at most ten minutes and r
 
 ## Scoped folder endpoint (0.2.0)
 
-Android sends `fileShare` only when the Mac advertises that capability, after authentication and on changes, with `enabled`, `name`, and `writable`. The Mac uses the authenticated TCP peer's IPv4 address, not a client-supplied URL, to mount `http://<phone>:41692/Kunnect/` through NetFS. The username is `kunnect`; the password is the existing pairing secret. It is supplied directly to NetFS rather than embedded in a URL or process arguments. Tailscale encrypts transport. Tailnet policy must allow Mac → phone TCP 41692.
+Android sends `fileShare` only when the Mac advertises that capability, after authentication and on changes, with `enabled`, `name`, and `writable`. The Mac uses the authenticated TCP peer's IPv4 address, not a client-supplied URL, to mount `http://<phone>:41692/Teather/` (or legacy `/Kunnect/` for older companions) through NetFS. The username is `teather`; the password is the existing pairing secret. It is supplied directly to NetFS rather than embedded in a URL or process arguments. Tailscale encrypts transport. Tailnet policy must allow Mac → phone TCP 41692.
 
 The Android endpoint accepts only the paired Mac's configured IPv4 (debug builds additionally accept loopback for emulator tests), requires Basic authentication on every request, and resolves paths through the persisted SAF tree. Traversal components and encoded path separators are rejected. It is off unless the user has explicitly selected and enabled a folder and the connection foreground service is running.
 
@@ -27,3 +27,5 @@ Read operations: `OPTIONS`, `PROPFIND` (depth 0/1 only), `HEAD`, and `GET` inclu
 Request headers are capped at 32 KiB, command lines at 8 KiB, directory listings at 10,000 entries, and uploads at 8 GiB. Up to four worker threads stream through fixed 64 KiB buffers and expire after 20 idle seconds. The acceptor blocks while idle; there are no scans or file-server heartbeats. PUT stages complete data in a sibling temporary document before a backup/rename commit; interrupted uploads preserve the previous document. SAF does not provide a universal crash-atomic replacement API.
 
 Older Mac companions without the `fileShare` capability keep receiving notification messages only, with the legacy 30-second heartbeat/75-second Android timeout. Updated pairs use the two-minute heartbeat/five-minute timeout. This allows updating either app first without breaking notification mirroring.
+
+Since 0.2.1, `fileShare.path` advertises `/Teather/`. Android accepts both `/Teather/` and `/Kunnect/` and returns matching PROPFIND href prefixes. New Mac clients use the advertised path and fall back to `/Kunnect/` when the field is absent. The authentication username and application IDs are retained from the previous name.

@@ -1,8 +1,8 @@
-# Kunnect
+# Teather
 
 Your Android notifications, on your Mac. A small native companion pair using your existing Tailscale network.
 
-<p><img src="docs/screenshots/android-home.png" width="240" alt="Kunnect Android connection screen"> <img src="docs/screenshots/android-apps.png" width="240" alt="Choose apps to mirror"> <img src="docs/screenshots/android-files-selected.png" width="240" alt="Scoped Android folder with read-only default"></p>
+<p><img src="docs/screenshots/android-home.png" width="240" alt="Teather Android connection screen"> <img src="docs/screenshots/android-apps.png" width="240" alt="Choose apps to mirror"> <img src="docs/screenshots/android-files.png" width="240" alt="Scoped Android folder with read-only default"></p>
 
 ## What it does
 
@@ -14,38 +14,38 @@ Your Android notifications, on your Mac. A small native companion pair using you
 - Per-app control over whether a Mac dismissal also dismisses on Android.
 - Optional hidden message content and Mac notification sound (off by default).
 - Authenticated connection to one phone; Android Keystore and macOS Keychain protect the pairing key.
-- No Kunnect backend, analytics, notification archive, or polling for notification changes.
+- No Teather backend, analytics, notification archive, or polling for notification changes.
 
 ## Install and pair
 
-Download `Kunnect-Android.apk` and `Kunnect-macOS-arm64.dmg` from [Releases](https://github.com/BriskAM/kunnect/releases).
+Download `Teather-Android.apk` and `Teather-macOS-arm64.dmg` from [Releases](https://github.com/BriskAM/teather/releases).
 
 1. Install the APK on Android 9 or newer. On sideloaded apps, Android may require **App info → ⋮ → Allow restricted settings** before granting notification access.
-2. Open the DMG and drag `Kunnect.app` onto the **Applications** shortcut on an Apple Silicon Mac running macOS 13 or newer. This initial personal build is ad-hoc signed, not Apple notarized. Use macOS **Privacy & Security → Open Anyway** if Gatekeeper blocks the downloaded app.
+2. Open the DMG and drag `Teather.app` onto the **Applications** shortcut on an Apple Silicon Mac running macOS 13 or newer. This initial personal build is ad-hoc signed, not Apple notarized. Use macOS **Privacy & Security → Open Anyway** if Gatekeeper blocks the downloaded app.
 3. Connect both devices to the same Tailscale tailnet. Your tailnet policy must allow the phone to reach the Mac on **TCP port 41691**. No exit node or Tailscale Serve setup is required.
-4. Open Kunnect from the Mac menu bar and allow notifications. Copy the Mac's **Tailscale IPv4** (`100.64.x.x`–`100.127.x.x`) from Tailscale if it is not detected automatically, plus the pairing key from Kunnect.
-5. In Android Kunnect, enable notification access, enter those details, and select the apps you want to mirror. Tap **Start syncing** if needed.
-6. Keep Tailscale running on both devices. Kunnect uses an Android foreground service with a persistent connection notification. Start it manually after a phone reboot. A Mac asleep or offline cannot receive live notifications.
+4. Open Teather from the Mac menu bar and allow notifications. Copy the Mac's **Tailscale IPv4** (`100.64.x.x`–`100.127.x.x`) from Tailscale if it is not detected automatically, plus the pairing key from Teather.
+5. In Android Teather, enable notification access, enter those details, and select the apps you want to mirror. Tap **Start syncing** if needed.
+6. Keep Tailscale running on both devices. Teather uses an Android foreground service with a persistent connection notification. Start it manually after a phone reboot. A Mac asleep or offline cannot receive live notifications.
 
 ## Android folder as a Mac disk
 
-1. In Android Kunnect, open **Files → Choose folder**. Android grants access only to that directory and its descendants. Some storage roots and app-private locations cannot be selected.
-2. Turn on **Share with your Mac**. Keep Kunnect and Tailscale running. The phone must allow incoming Tailscale connections from your paired Mac on **TCP 41692**, in addition to phone → Mac TCP 41691 for the notification connection. If Tailscale's “shields up” mode is enabled on Android, incoming file access will be blocked.
+1. In Android Teather, open **Files → Choose folder**. Android grants access only to that directory and its descendants. Some storage roots and app-private locations cannot be selected.
+2. Turn on **Share with your Mac**. Keep Teather and Tailscale running. The phone must allow incoming Tailscale connections from your paired Mac on **TCP 41692**, in addition to phone → Mac TCP 41691 for the notification connection. If Tailscale's “shields up” mode is enabled on Android, incoming file access will be blocked.
 3. In the Mac menu bar, choose **Mount Android folder**, or use **Mount in Finder** in settings. It appears as a network volume in Finder and under `/Volumes`. Only mount when you need it; nothing is mirrored or scanned in advance.
 4. Access is **read-only by default**. To create, replace, move, or delete files, explicitly enable **Allow changes from Mac** on Android and then eject/remount the volume on Mac. Revoking write access is enforced immediately by Android, even before remounting.
-5. Eject from Kunnect or Finder when finished. **Stop sharing & forget folder** on Android stops the endpoint and releases its persisted folder grant.
+5. Eject from Teather or Finder when finished. **Stop sharing & forget folder** on Android stops the endpoint and releases its persisted folder grant.
 
 The endpoint is authenticated with the pairing key and restricted to the paired Mac's Tailscale IPv4 address. Tailscale supplies encryption. Files stream in 64 KiB buffers, with at most four request workers; there is no background tree traversal, sync queue, file watcher, or file-server heartbeat. macOS/Finder can issue its own metadata and preview requests while a volume is mounted, so eject it when idle if battery usage is the priority.
 
-Use a local device folder for predictable behavior. Cloud document providers can involve their own downloads and battery use. SAF is a document API, not a full POSIX filesystem: Finder extended attributes/timestamp updates and recursive server-side directory copying are not supported. Moving between directories requires provider support; renaming over an existing destination is refused rather than silently deleting it. Uploads are staged before replacing existing files. Providers do not offer a universal atomic-replace primitive, so a process/device crash during commit can leave a `.kunnect-upload-*` or `.kunnect-backup-*` recovery file. Do not use the network volume for databases, app bundles, or workloads requiring local-disk locking/atomicity.
+Use a local device folder for predictable behavior. Cloud document providers can involve their own downloads and battery use. SAF is a document API, not a full POSIX filesystem: Finder extended attributes/timestamp updates and recursive server-side directory copying are not supported. Moving between directories requires provider support; renaming over an existing destination is refused rather than silently deleting it. Uploads are staged before replacing existing files. Providers do not offer a universal atomic-replace primitive, so a process/device crash during commit can leave a `.teather-upload-*` or `.teather-backup-*` recovery file. Do not use the network volume for databases, app bundles, or workloads requiring local-disk locking/atomicity.
 
 ## Battery and background access
 
-The first connection offers an optional **Keep Kunnect reachable?** prompt. Choose **Keep system default** to continue without an exemption, or **Allow background access** to open Android's system consent dialog. The Settings screen shows exemption status and allows requesting it later. Kunnect never silently disables battery optimization.
+The first connection offers an optional **Keep Teather reachable?** prompt. Choose **Keep system default** to continue without an exemption, or **Allow background access** to open Android's system consent dialog. The Settings screen shows exemption status and allows requesting it later. Teather never silently disables battery optimization.
 
 An exemption improves availability during idle/Doze; it **does not reduce battery consumption**. Low idle work comes from event-driven notification updates, two-minute idle heartbeats, retries backing off up to two minutes, no wake locks, and on-demand file access. Real drain also depends on Tailscale, radio conditions, notification frequency, Finder requests, and transfers; no percentage-per-hour claim has been established on a physical phone.
 
-The Android connection stays available with the app screen closed. Some phone manufacturers' battery restrictions and Android Doze can still delay network access. The exemption is optional; Kunnect does not hold a wake lock or silently change battery settings.
+The Android connection stays available with the app screen closed. Some phone manufacturers' battery restrictions and Android Doze can still delay network access. The exemption is optional; Teather does not hold a wake lock or silently change battery settings.
 
 ## Notification behavior
 
@@ -104,3 +104,9 @@ The `fixture` module is an isolated notification generator for emulator tests. I
 ## Current scope
 
 One phone and one Mac, IPv4 tailnet addressing, notification mirroring/dismissal, and one scoped folder mounted on demand. No SMS-history permission, reply sending, automatic file synchronization, clipboard sync, cloud relay, or account system. This is a first personal-use prerelease; real-device battery life and cross-network Tailscale behavior need a hardware acceptance pass.
+
+## Rename compatibility
+
+Teather was previously called Kunnect. Android's `dev.kunnect` application ID, local preference/Keystore names, macOS's `dev.kunnect.mac` bundle ID and Keychain service, and the existing Android release signing identity are intentionally retained so updates keep settings and pairing. These are internal compatibility identifiers, not the displayed app/project name.
+
+Updated pairs use `/Teather/` for the Finder volume. Android still accepts `/Kunnect/`, and the Mac falls back to that route for older companions. The internal WebDAV username remains `kunnect` for compatibility. After installing Teather on Mac, quit the old Kunnect app and remove its old `.app` copy rather than running both companions.

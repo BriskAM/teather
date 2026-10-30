@@ -1,6 +1,6 @@
 import Foundation
 import Network
-import KunnectCore
+import TeatherCore
 
 final class Peer {
     let id = UUID()

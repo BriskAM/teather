@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { KunnectApp() }
+        setContent { TeatherApp() }
     }
     fun connect() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -102,7 +102,7 @@ private object Glyphs {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun KunnectApp() {
+private fun TeatherApp() {
     val context = LocalActivity.current as MainActivity
     val prefs = remember { Preferences(context) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -140,8 +140,8 @@ private fun KunnectApp() {
             }
             if (context.showBatteryPrompt) AlertDialog(
                 onDismissRequest = { context.showBatteryPrompt = false; prefs.batteryPromptSeen = true },
-                title = { Text("Keep Kunnect reachable?") },
-                text = { Text("Android may delay the connection while your phone sleeps. You can optionally allow Kunnect to run without battery optimization. This improves availability; it does not reduce battery use. Kunnect does not hold a wake lock or scan your files in the background.") },
+                title = { Text("Keep Teather reachable?") },
+                text = { Text("Android may delay the connection while your phone sleeps. You can optionally allow Teather to run without battery optimization. This improves availability; it does not reduce battery use. Teather does not hold a wake lock or scan your files in the background.") },
                 confirmButton = { TextButton(onClick = { context.showBatteryPrompt = false; prefs.batteryPromptSeen = true; context.requestBatteryExemption() }) { Text("Allow background access") } },
                 dismissButton = { TextButton(onClick = { context.showBatteryPrompt = false; prefs.batteryPromptSeen = true }) { Text("Keep system default") } }
             )
@@ -169,7 +169,7 @@ private fun Home(prefs: Preferences, access: Boolean, version: Int, pair: () -> 
     val lastSync by BridgeState.lastSync.collectAsState()
     val connected = status == "Connected"
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { PageHeading("Kunnect", "Your devices.\nBetter together.") }
+        item { PageHeading("Teather", "Your devices.\nBetter together.") }
         item {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(36.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(24.dp)) {
@@ -188,7 +188,7 @@ private fun Home(prefs: Preferences, access: Boolean, version: Int, pair: () -> 
                 }
             }
         }
-        if (!access) item { InfoCard(Glyphs.Bell, "Let notifications through", "Choose Kunnect in Android’s notification access settings.", "Allow access", grant) }
+        if (!access) item { InfoCard(Glyphs.Bell, "Let notifications through", "Choose Teather in Android’s notification access settings.", "Allow access", grant) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard("YOUR APPS", "${prefs.enabledApps.size}", "Only what you choose", Modifier.weight(1f).clickable(onClick = apps))
@@ -351,10 +351,10 @@ private fun FilesScreen(prefs: Preferences, version: Int, changed: () -> Unit) {
         }
         if (prefs.host.isEmpty()) item { Text("Pair your Mac in the Connect tab first.", color = MaterialTheme.colorScheme.primary) }
         if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
-        item { InfoCard(Glyphs.Link, "Mount it in Finder", "On your Mac, open Kunnect → Mount Android folder. Files stream only when requested. Eject the disk when you’re finished to avoid Finder preview and metadata requests.", "Open Tailscale") {
+        item { InfoCard(Glyphs.Link, "Mount it in Finder", "On your Mac, open Teather → Mount Android folder. Files stream only when requested. Eject the disk when you’re finished to avoid Finder preview and metadata requests.", "Open Tailscale") {
             context.packageManager.getLaunchIntentForPackage("com.tailscale.ipn")?.let { context.startActivity(it) }
         } }
-        item { Text("Use a local device folder for predictable performance. Cloud document providers, Finder previews and large transfers can use additional battery. The folder is available while Kunnect and Tailscale are running.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Text("Use a local device folder for predictable performance. Cloud document providers, Finder previews and large transfers can use additional battery. The folder is available while Teather and Tailscale are running.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
     if (confirmWrite) AlertDialog(onDismissRequest = { confirmWrite = false }, title = { Text("Allow your Mac to change files?") }, text = { Text("Your paired Mac will be able to create, replace, rename and delete files inside this folder. Read-only access is safer when you only need to browse or copy files to your Mac.") }, confirmButton = { TextButton(onClick = { confirmWrite = false; writable = true; prefs.shareWrite = true; refresh() }) { Text("Allow changes") } }, dismissButton = { TextButton(onClick = { confirmWrite = false }) { Text("Keep read-only") } })
 }
@@ -372,10 +372,10 @@ private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dy
         item { Spacer(Modifier.height(14.dp)); SectionLabel("APPEARANCE") }
         item { SettingToggle("Wallpaper colors", "Use your phone’s palette. Light and dark follow your system.", dynamic, setDynamic) }
         item { Spacer(Modifier.height(14.dp)); SectionLabel("CONNECTION HEALTH") }
-        item { InfoCard(Glyphs.Bell, if (access) "Notification access is on" else "Notification access is off", "Kunnect needs access to mirror and dismiss your selected notifications.", "Open Android settings") { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) } }
+        item { InfoCard(Glyphs.Bell, if (access) "Notification access is on" else "Notification access is off", "Teather needs access to mirror and dismiss your selected notifications.", "Open Android settings") { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) } }
         item {
             val exempt = context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
-            InfoCard(Glyphs.Link, if (exempt) "Background access allowed" else "Keep the connection available", "Optional: exempt Kunnect from battery optimization for more reliable background access. This does not reduce battery use. Keep Tailscale connected too.", if (exempt) "App battery settings" else "Allow background access") {
+            InfoCard(Glyphs.Link, if (exempt) "Background access allowed" else "Keep the connection available", "Optional: exempt Teather from battery optimization for more reliable background access. This does not reduce battery use. Keep Tailscale connected too.", if (exempt) "App battery settings" else "Allow background access") {
                 if (exempt) context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) else context.requestBatteryExemption()
             }
         }
@@ -383,7 +383,7 @@ private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dy
             val intent = context.packageManager.getLaunchIntentForPackage("com.tailscale.ipn")
             if (intent != null) context.startActivity(intent) else context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
         } }
-        item { Text("Kunnect 0.2.0\nMade for fewer interruptions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp, 24.dp)) }
+        item { Text("Teather 0.2.1\nMade for fewer interruptions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp, 24.dp)) }
     }
 }
 
@@ -407,7 +407,7 @@ private fun PairSheet(prefs: Preferences, dismiss: () -> Unit, connect: () -> Un
     ModalBottomSheet(onDismissRequest = dismiss) {
         Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Meet your Mac.", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
-            Text("Open Kunnect in your Mac’s menu bar. Copy its Tailscale IPv4 address and pairing key here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Open Teather in your Mac’s menu bar. Copy its Tailscale IPv4 address and pairing key here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(host, { host = it.trim(); error = null }, label = { Text("Mac’s Tailscale IPv4") }, placeholder = { Text("100.x.x.x") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(token, { token = it.trim().lowercase(); error = null }, label = { Text("Pairing key") }, singleLine = true, visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { TextButton(onClick = { visible = !visible }) { Text(if (visible) "Hide" else "Show") } }, modifier = Modifier.fillMaxWidth())
             if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)

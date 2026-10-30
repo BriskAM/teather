@@ -22,7 +22,7 @@ for _ in range(80):
     time.sleep(.25)
 else: raise SystemExit('Android file-share fixture did not start')
 PY
-swift run --package-path "$ROOT/macos" KunnectDiskChecks
+swift run --package-path "$ROOT/macos" TeatherDiskChecks
 "$ADB" -e shell am broadcast -a dev.kunnect.test.STOP_SHARE -p dev.kunnect >/dev/null
 wait "$FIXTURE_PID"
 rg -q 'OK \(1 test\)' "$ROOT/output/native-mount-fixture.txt"

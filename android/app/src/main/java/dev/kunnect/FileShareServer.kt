@@ -43,7 +43,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
             key = token; allowedPeer = prefs.host; folder = selected
             val listener = ServerSocket().apply { reuseAddress = true; bind(InetSocketAddress(requestedPort), 4) }
             server = listener; configuration = config
-            val pool = ThreadPoolExecutor(4, 4, 20, TimeUnit.SECONDS, ArrayBlockingQueue(4), { task -> Thread(task, "Kunnect files").apply { isDaemon = true } })
+            val pool = ThreadPoolExecutor(4, 4, 20, TimeUnit.SECONDS, ArrayBlockingQueue(4), { task -> Thread(task, "Teather files").apply { isDaemon = true } })
             // Start workers only on demand, and let every worker disappear when idle.
             pool.allowCoreThreadTimeOut(true)
             workers = pool
@@ -56,13 +56,13 @@ class FileShareServer(private val context: Context, private val requestedPort: I
                     try { pool.execute { try { socket.use { handle(it, selected) } } finally { connections.remove(socket) } } }
                     catch (_: java.util.concurrent.RejectedExecutionException) { connections.remove(socket); socket.close() }
                 }
-            }, "Kunnect file listener").apply { isDaemon = true; start() }
+            }, "Teather file listener").apply { isDaemon = true; start() }
             ShareState.status.value = "Ready · ${root.name}"
         } catch (_: Exception) { close(); ShareState.status.value = "Folder unavailable · choose it again" }
     }
     fun info(): JSONObject {
         val prefs = Preferences(context)
-        return JSONObject().put("type", "fileShare").put("enabled", server != null).put("name", if (server != null) sharedName.take(128) else "").put("writable", prefs.shareWrite)
+        return JSONObject().put("type", "fileShare").put("enabled", server != null).put("name", if (server != null) sharedName.take(128) else "").put("writable", prefs.shareWrite).put("path", "/Teather/")
     }
     @Synchronized override fun close() {
         runCatching { server?.close() }; server = null; configuration = ""
@@ -72,7 +72,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
         folder = null; key = ""; ShareState.status.value = "Sharing is off"
     }
     private class DavError(val status: Int, message: String = "") : IOException(message)
-    private data class Request(val method: String, val parts: List<String>, val headers: Map<String, String>, val body: InputStream)
+    private data class Request(val method: String, val parts: List<String>, val headers: Map<String, String>, val body: InputStream, val root: String)
     private fun line(input: InputStream, max: Int): String {
         val bytes = ByteArrayOutputStream()
         while (true) {
@@ -90,7 +90,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
             decoded
         }
         if (segments.isEmpty()) return emptyList()
-        if (segments.firstOrNull() != "Kunnect") throw DavError(404)
+        if (segments.firstOrNull() !in listOf("Teather", "Kunnect")) throw DavError(404)
         return segments.drop(1)
     }
     private fun readRequest(input: InputStream): Request {
@@ -114,7 +114,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
         val transfer = headers["transfer-encoding"]
         if (transfer != null && (!transfer.equals("chunked", true) || length != null)) throw DavError(400)
         val body = if (transfer != null) ChunkedInput(input) else LimitedInput(input, length ?: 0)
-        return Request(first[0].uppercase(Locale.ROOT), parts(first[1]), headers, body)
+        return Request(first[0].uppercase(Locale.ROOT), parts(first[1]), headers, body, if (URI(first[1]).path.split('/').firstOrNull { it.isNotEmpty() } == "Kunnect") "Kunnect" else "Teather")
     }
     private fun handle(socket: Socket, tree: SharedFolder) {
         socket.soTimeout = 30000
@@ -132,7 +132,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
                     val entry = tree.resolve(request.parts) ?: throw DavError(404)
                     val listing = arrayListOf(request.parts to entry)
                     if (depth == "1" && entry.directory) listing.addAll(tree.children(entry).map { (request.parts + it.name) to it })
-                    val xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:multistatus xmlns:D=\"DAV:\">" + listing.joinToString("") { (path, node) -> propertyResponse(path, node) } + "</D:multistatus>"
+                    val xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:multistatus xmlns:D=\"DAV:\">" + listing.joinToString("") { (path, node) -> propertyResponse(path, node, request.root) } + "</D:multistatus>"
                     reply(output, 207, xml.toByteArray(Charsets.UTF_8), mapOf("Content-Type" to "application/xml; charset=utf-8", "DAV" to "1, 2"))
                 }
                 "GET", "HEAD" -> {
@@ -204,12 +204,12 @@ class FileShareServer(private val context: Context, private val requestedPort: I
                 if (existing?.directory == true) throw DavError(405)
                 if (!request.headers.containsKey("content-length") && !request.headers.containsKey("transfer-encoding")) throw DavError(411)
                 val parent = tree.resolve(request.parts.dropLast(1)) ?: throw DavError(409)
-                val stage = tree.create(parent, ".kunnect-upload-${UUID.randomUUID()}")
+                val stage = tree.create(parent, ".teather-upload-${UUID.randomUUID()}")
                 var backup: SharedFolder.Entry? = null; var committed = false
                 try {
                     tree.output(stage).use { sink -> copy(request.body, sink, MAX_UPLOAD, exact = false) }
                     if (!Preferences(context).shareWrite || !Preferences(context).shareEnabled) throw DavError(403)
-                    if (existing != null) backup = tree.rename(existing, ".kunnect-backup-${UUID.randomUUID()}")
+                    if (existing != null) backup = tree.rename(existing, ".teather-backup-${UUID.randomUUID()}")
                     tree.rename(stage, request.parts.last()); committed = true
                     backup?.let { tree.delete(it) }
                 } catch (e: Exception) {
@@ -248,8 +248,8 @@ class FileShareServer(private val context: Context, private val requestedPort: I
         }
     }
     private fun allowedMethods(): String = "OPTIONS, PROPFIND, GET, HEAD" + if (Preferences(context).shareWrite) ", PUT, MKCOL, DELETE, MOVE, COPY, LOCK, UNLOCK" else ""
-    private fun propertyResponse(path: List<String>, entry: SharedFolder.Entry): String {
-        val href = "/Kunnect/" + path.joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") } + if (entry.directory && path.isNotEmpty()) "/" else ""
+    private fun propertyResponse(path: List<String>, entry: SharedFolder.Entry, root: String): String {
+        val href = "/$root/" + path.joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") } + if (entry.directory && path.isNotEmpty()) "/" else ""
         val write = Preferences(context).shareWrite
         return "<D:response><D:href>${xml(href)}</D:href><D:propstat><D:prop><D:displayname>${xml(entry.name)}</D:displayname><D:resourcetype>${if (entry.directory) "<D:collection/>" else ""}</D:resourcetype><D:getcontentlength>${entry.size.coerceAtLeast(0)}</D:getcontentlength><D:getcontenttype>${xml(entry.mime)}</D:getcontenttype><D:getlastmodified>${date(entry.modified)}</D:getlastmodified><D:getetag>${xml(etag(entry))}</D:getetag><D:supportedlock>${if (write) "<D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>" else ""}</D:supportedlock><D:lockdiscovery/></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>"
     }
@@ -262,7 +262,7 @@ class FileShareServer(private val context: Context, private val requestedPort: I
         val reason = mapOf(200 to "OK", 201 to "Created", 204 to "No Content", 206 to "Partial Content", 207 to "Multi-Status", 400 to "Bad Request", 401 to "Unauthorized", 403 to "Forbidden", 404 to "Not Found", 405 to "Method Not Allowed", 409 to "Conflict", 411 to "Length Required", 412 to "Precondition Failed", 413 to "Content Too Large", 415 to "Unsupported Media Type", 416 to "Range Not Satisfiable", 423 to "Locked", 431 to "Request Header Fields Too Large", 501 to "Not Implemented", 507 to "Insufficient Storage")[status] ?: "Error"
         val fields = LinkedHashMap(extra); fields["Connection"] = "close"; fields["Cache-Control"] = "no-store"
         if (length != null) fields["Content-Length"] = length.toString() else fields["Transfer-Encoding"] = "chunked"
-        if (status == 401) fields["WWW-Authenticate"] = "Basic realm=\"Kunnect\", charset=\"UTF-8\""
+        if (status == 401) fields["WWW-Authenticate"] = "Basic realm=\"Teather\", charset=\"UTF-8\""
         if (fields.any { (name, value) -> name.any { it == '\r' || it == '\n' } || value.any { it == '\r' || it == '\n' } }) throw DavError(400)
         val text = "HTTP/1.1 $status $reason\r\n" + fields.entries.joinToString("") { "${it.key}: ${it.value}\r\n" } + "\r\n"
         output.write(text.toByteArray(Charsets.ISO_8859_1))

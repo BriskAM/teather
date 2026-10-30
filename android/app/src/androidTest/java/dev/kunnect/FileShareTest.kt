@@ -53,6 +53,8 @@ class FileShareTest {
             assertEquals(403, request(server.port, "GET", "/Kunnect/a%2fb").status)
             val content = request(server.port, "GET", "/Kunnect/hello%20%26%20space.txt")
             assertEquals("Hello from scoped Android storage", String(content.body))
+            assertEquals("Hello from scoped Android storage", String(request(server.port, "GET", "/Teather/hello%20%26%20space.txt").body))
+            assertTrue(String(request(server.port, "PROPFIND", "/Teather/", headers = mapOf("Depth" to "1")).body).contains("/Teather/"))
             val range = request(server.port, "GET", "/Kunnect/hello%20%26%20space.txt", headers = mapOf("Range" to "bytes=6-9"))
             assertEquals(206, range.status); assertEquals("from", String(range.body))
             assertEquals(416, request(server.port, "GET", "/Kunnect/hello%20%26%20space.txt", headers = mapOf("Range" to "bytes=9999-")).status)
@@ -68,7 +70,7 @@ class FileShareTest {
                 socket.shutdownOutput(); socket.getInputStream().readBytes()
             }
             assertEquals("replacement", String(request(server.port, "GET", "/Kunnect/new.txt").body))
-            assertFalse(folder.children(folder.root()).any { it.name.startsWith(".kunnect-upload-") })
+            assertFalse(folder.children(folder.root()).any { it.name.startsWith(".teather-upload-") })
             assertEquals(201, request(server.port, "PUT", "/Kunnect/chunks.txt", "3\r\nabc\r\n2\r\nde\r\n0\r\n\r\n", mapOf("Transfer-Encoding" to "chunked")).status)
             assertEquals("abcde", String(request(server.port, "GET", "/Kunnect/chunks.txt").body))
             assertEquals(201, request(server.port, "MKCOL", "/Kunnect/sub/").status)

@@ -1,5 +1,5 @@
 import Foundation
-import KunnectCore
+import TeatherCore
 func XCTAssertEqual<T: Equatable>(_ a: T, _ b: T) { precondition(a == b, "Expected \(b), got \(a)") }
 func XCTAssertTrue(_ value: Bool) { precondition(value) }
 func XCTAssertFalse(_ value: Bool) { precondition(!value) }

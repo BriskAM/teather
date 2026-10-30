@@ -11,10 +11,10 @@ def run(*args): return subprocess.run([adb,'-e',*args],capture_output=True,check
 def tree():
     # Never read a stale dump when an animated window transition has no current root.
     for _ in range(8):
-        run('shell', 'rm', '-f', '/sdcard/kunnect-ui.xml')
-        output = run('shell', 'uiautomator', 'dump', '/sdcard/kunnect-ui.xml')
+        run('shell', 'rm', '-f', '/sdcard/teather-ui.xml')
+        output = run('shell', 'uiautomator', 'dump', '/sdcard/teather-ui.xml')
         if b'dumped to' in output:
-            return ET.fromstring(run('shell', 'cat', '/sdcard/kunnect-ui.xml'))
+            return ET.fromstring(run('shell', 'cat', '/sdcard/teather-ui.xml'))
         time.sleep(.3)
     raise RuntimeError('No current Android UI tree')
 

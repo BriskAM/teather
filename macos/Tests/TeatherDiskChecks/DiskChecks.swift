@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import KunnectTransport
+import TeatherTransport
 
 @main struct DiskChecks {
     static func main() throws {
@@ -21,7 +21,7 @@ import KunnectTransport
         let renamed = writable.appendingPathComponent("Renamed on Mac.txt")
         try FileManager.default.moveItem(at: file, to: renamed)
         try FileManager.default.removeItem(at: renamed)
-        let source = FileManager.default.temporaryDirectory.appendingPathComponent("Kunnect-copy-\(UUID().uuidString).txt")
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent("Teather-copy-\(UUID().uuidString).txt")
         try Data("Copied through Finder-compatible filesystem APIs".utf8).write(to: source)
         defer { try? FileManager.default.removeItem(at: source) }
         let copied = writable.appendingPathComponent("Copied from Mac.txt")
