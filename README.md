@@ -2,7 +2,7 @@
 
 Your Android notifications, on your Mac. A small native companion pair using your existing Tailscale network.
 
-<p><img src="docs/screenshots/android-home.png" width="240" alt="Kunnect Android connection screen"> <img src="docs/screenshots/android-apps.png" width="240" alt="Choose apps to mirror"> <img src="docs/screenshots/android-dark.png" width="240" alt="Kunnect dark theme"></p>
+<p><img src="docs/screenshots/android-home.png" width="240" alt="Kunnect Android connection screen"> <img src="docs/screenshots/android-apps.png" width="240" alt="Choose apps to mirror"> <img src="docs/screenshots/android-files-selected.png" width="240" alt="Scoped Android folder with read-only default"></p>
 
 ## What it does
 

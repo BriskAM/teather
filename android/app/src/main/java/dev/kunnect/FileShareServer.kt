@@ -43,7 +43,9 @@ class FileShareServer(private val context: Context, private val requestedPort: I
             key = token; allowedPeer = prefs.host; folder = selected
             val listener = ServerSocket().apply { reuseAddress = true; bind(InetSocketAddress(requestedPort), 4) }
             server = listener; configuration = config
-            val pool = ThreadPoolExecutor(0, 4, 20, TimeUnit.SECONDS, ArrayBlockingQueue(4), { task -> Thread(task, "Kunnect files").apply { isDaemon = true } })
+            val pool = ThreadPoolExecutor(4, 4, 20, TimeUnit.SECONDS, ArrayBlockingQueue(4), { task -> Thread(task, "Kunnect files").apply { isDaemon = true } })
+            // Start workers only on demand, and let every worker disappear when idle.
+            pool.allowCoreThreadTimeOut(true)
             workers = pool
             Thread({
                 while (!listener.isClosed) {

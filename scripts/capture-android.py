@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[1]
 adb = str(Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Library/Android/sdk'))) / 'platform-tools/adb')
@@ -11,12 +12,19 @@ output = root / 'docs/screenshots'
 output.mkdir(parents=True, exist_ok=True)
 def run(*args): return subprocess.run([adb, '-e', *args], check=True, capture_output=True).stdout
 def tree():
-    run('shell', 'uiautomator', 'dump', '/sdcard/kunnect-ui.xml')
-    return ET.fromstring(run('shell', 'cat', '/sdcard/kunnect-ui.xml'))
+    # Never read a stale dump when an animated window transition has no current root.
+    for _ in range(8):
+        run('shell', 'rm', '-f', '/sdcard/kunnect-ui.xml')
+        output = run('shell', 'uiautomator', 'dump', '/sdcard/kunnect-ui.xml')
+        if b'dumped to' in output:
+            return ET.fromstring(run('shell', 'cat', '/sdcard/kunnect-ui.xml'))
+        time.sleep(.3)
+    raise RuntimeError('No current Android UI tree')
+
 def tap(label):
     node = next(n for n in tree().iter('node') if n.get('text') == label)
     x1,y1,x2,y2 = map(int, re.findall(r'\d+', node.get('bounds')))
-    run('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2))
+    run('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2)); time.sleep(.5)
 def capture(name, required):
     nodes = list(tree().iter('node'))
     assert any(required in n.get('text','') and n.get('package') == 'dev.kunnect' for n in nodes), f'Wrong screen: {name}'
