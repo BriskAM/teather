@@ -29,6 +29,7 @@ public final class BridgeServer {
     public var onMessage: (([String: Any]) -> Void)?
     public var onStatus: ((String) -> Void)?
     public var onPair: ((String) -> Void)?
+    public var onPeer: ((String) -> Void)?
     public func start(token: String, device: String) {
         queue.async { [self] in
             guard listener == nil else { return }
@@ -48,7 +49,7 @@ public final class BridgeServer {
                 clock.schedule(deadline: .now() + 10, repeating: 10)
                 clock.setEventHandler { [weak self] in
                     guard let self else { return }
-                    for peer in self.peers.values where Date().timeIntervalSince(peer.lastReceived) > (peer.authenticated ? 75 : 10) { peer.connection.cancel() }
+                    for peer in self.peers.values where Date().timeIntervalSince(peer.lastReceived) > (peer.authenticated ? 300 : 10) { peer.connection.cancel() }
                 }
                 timer = clock; clock.resume()
             } catch { status("Couldn’t listen on port 41691") }
@@ -100,12 +101,13 @@ public final class BridgeServer {
             if let old = active { peers[old]?.connection.cancel() }
             peer.authenticated = true; peer.deviceID = id; active = peer.id
             if pairedDevice.isEmpty { pairedDevice = id; DispatchQueue.main.async { self.onPair?(id) } }
+            if case .hostPort(let host, _) = peer.connection.endpoint { DispatchQueue.main.async { self.onPeer?(String(describing: host)) } }
             peer.send(["type": "ready", "version": 1]); status("Connected · \((event["name"] as? String ?? "Android").prefix(128))")
             return true
         }
         guard active == peer.id else { return false }
         if type == "ping" { peer.send(["type": "pong"]); return true }
-        guard ["snapshot", "delta", "dismissResult", "test", "unavailable"].contains(type) else { return false }
+        guard ["snapshot", "delta", "dismissResult", "test", "unavailable", "fileShare"].contains(type) else { return false }
         if type == "snapshot" || type == "delta" {
             guard let items = event["items"] as? [[String: Any]], items.count <= 256 else { return false }
         }

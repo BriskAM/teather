@@ -7,7 +7,7 @@ if (signingFile.exists()) signingFile.inputStream().use { signingProperties.load
 android {
     namespace = "dev.kunnect"
     compileSdk = 37
-    defaultConfig { applicationId = "dev.kunnect"; minSdk = 28; targetSdk = 35; versionCode = 1; versionName = "0.1.0"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
+    defaultConfig { applicationId = "dev.kunnect"; minSdk = 28; targetSdk = 35; versionCode = 2; versionName = "0.2.0"; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
     signingConfigs {
         if (signingFile.exists()) create("localRelease") {
             storeFile = file(signingProperties.getProperty("storeFile"))

@@ -16,6 +16,7 @@ class ConnectionService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val socket = AtomicReference<Socket?>(null)
     private var job: Job? = null
+    private val files by lazy { FileShareServer(this) }
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "stop") { stopSelf(); return START_NOT_STICKY }
@@ -25,6 +26,7 @@ class ConnectionService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, ConnectionService::class.java).setAction("stop"), PendingIntent.FLAG_IMMUTABLE)
         startForeground(1, Notification.Builder(this, "connection").setSmallIcon(dev.kunnect.R.drawable.ic_kunnect).setContentTitle("Kunnect is running").setContentText("Keeping your Mac in sync over Tailscale").setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "Disconnect", stop).build()).build())
         BridgeState.running.value = true
+        scope.launch { files.reconfigure(); BridgeState.changed() }
         if (job?.isActive != true) job = scope.launch { connectLoop() }
         return START_STICKY
     }
@@ -39,7 +41,7 @@ class ConnectionService : Service() {
                 val connection = Socket()
                 socket.set(connection)
                 connection.connect(InetSocketAddress(prefs.host, 41691), 7000)
-                connection.soTimeout = 75000
+                connection.soTimeout = 300000
                 connection.tcpNoDelay = true
                 val output = connection.getOutputStream()
                 fun send(value: JSONObject) {
@@ -54,17 +56,21 @@ class ConnectionService : Service() {
                 connection.soTimeout = 12000
                 val ready = readFrame(input, line)
                 check(ready.optString("type") == "ready") { ready.optString("message", "Pairing failed") }
-                connection.soTimeout = 75000
+                connection.soTimeout = 300000
                 delayMs = 1000
                 BridgeState.status.value = "Connected"
                 BridgeState.changed()
                 coroutineScope {
                     val sender = launch {
                         var firstSnapshot = true
+                        var lastShare = ""
                         var previous = emptyMap<String, String>()
                         while (isActive) {
-                            val changed = withTimeoutOrNull(30000) { BridgeState.changes.receive(); true } ?: false
+                            val changed = withTimeoutOrNull(120000) { BridgeState.changes.receive(); true } ?: false
                             if (changed) delay(150) // Fold a burst of notification updates into one batch.
+                            if (BridgeState.shareDirty.getAndSet(false)) files.reconfigure()
+                            val share = files.info()
+                            if (share.toString() != lastShare) { send(share); lastShare = share.toString() }
                             if (BridgeState.dirty.getAndSet(false)) {
                                 val snapshot = withContext(Dispatchers.Main) { BridgeState.listener?.snapshot() }
                                 if (snapshot != null) {
@@ -103,7 +109,7 @@ class ConnectionService : Service() {
                     else -> (e.message ?: "Connection interrupted").take(140)
                 }
             } finally { runCatching { socket.getAndSet(null)?.close() } }
-            delay(delayMs); delayMs = (delayMs * 2).coerceAtMost(30000)
+            delay(delayMs); delayMs = (delayMs * 2).coerceAtMost(120000)
         }
     }
     private fun readFrame(input: java.io.InputStream, line: ByteArrayOutputStream): JSONObject {
@@ -116,5 +122,5 @@ class ConnectionService : Service() {
             check(line.size() < 65536) { "Invalid command size" }; line.write(byte)
         }
     }
-    override fun onDestroy() { scope.cancel(); runCatching { socket.getAndSet(null)?.close() }; BridgeState.running.value = false; BridgeState.status.value = "Not connected"; super.onDestroy() }
+    override fun onDestroy() { scope.cancel(); files.close(); runCatching { socket.getAndSet(null)?.close() }; BridgeState.running.value = false; BridgeState.status.value = "Not connected"; super.onDestroy() }
 }

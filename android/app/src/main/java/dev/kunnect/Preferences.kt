@@ -20,6 +20,10 @@ class Preferences(context: Context) {
     var hideContent: Boolean get() = prefs.getBoolean("private", false); set(v) { prefs.edit().putBoolean("private", v).apply() }
     var sound: Boolean get() = prefs.getBoolean("sound", false); set(v) { prefs.edit().putBoolean("sound", v).apply() }
     var dynamicColor: Boolean get() = prefs.getBoolean("dynamic", false); set(v) { prefs.edit().putBoolean("dynamic", v).apply() }
+    var sharedTree: String get() = prefs.getString("sharedTree", "")!!; set(v) { prefs.edit().putString("sharedTree", v).apply() }
+    var shareEnabled: Boolean get() = prefs.getBoolean("shareEnabled", false); set(v) { prefs.edit().putBoolean("shareEnabled", v).apply() }
+    var shareWrite: Boolean get() = prefs.getBoolean("shareWrite", false); set(v) { prefs.edit().putBoolean("shareWrite", v).apply() }
+    var batteryPromptSeen: Boolean get() = prefs.getBoolean("batteryPromptSeen", false); set(v) { prefs.edit().putBoolean("batteryPromptSeen", v).apply() }
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey("kunnect.pairing", null) as? SecretKey)?.let { return it }

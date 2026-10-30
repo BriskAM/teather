@@ -17,6 +17,7 @@ object BridgeState {
     val count = MutableStateFlow(0)
     val lastSync = MutableStateFlow(0L)
     val dirty = AtomicBoolean(true)
+    val shareDirty = AtomicBoolean(true)
     val changes = Channel<Unit>(Channel.CONFLATED)
     @Volatile var listener: NotificationBridge? = null
     fun changed() { dirty.set(true); changes.trySend(Unit) }
