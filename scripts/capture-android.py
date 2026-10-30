@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[1]
 adb = str(Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Library/Android/sdk'))) / 'platform-tools/adb')
 output = root / 'docs/screenshots'
 output.mkdir(parents=True, exist_ok=True)
-def run(*args): return subprocess.run([adb, *args], check=True, capture_output=True).stdout
+def run(*args): return subprocess.run([adb, '-e', *args], check=True, capture_output=True).stdout
 def tree():
     run('shell', 'uiautomator', 'dump', '/sdcard/kunnect-ui.xml')
     return ET.fromstring(run('shell', 'cat', '/sdcard/kunnect-ui.xml'))
@@ -23,6 +23,7 @@ def capture(name, required):
     (output / name).write_bytes(run('exec-out','screencap','-p'))
 run('shell','cmd','uimode','night','no')
 run('shell','cmd','statusbar','collapse')
+run('shell','am','force-stop','dev.kunnect')
 run('shell','am','start','-n','dev.kunnect/.MainActivity')
 capture('android-home.png','Your devices.')
 tap('Apps'); capture('android-apps.png','Less noise.')

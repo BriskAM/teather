@@ -9,7 +9,7 @@ Tested locally on 30 October 2026 with an Android 15/API 35 arm64 emulator and a
 - **Android unit test:** accept only the Tailscale IPv4 range and reject LAN, loopback, DNS, malformed and out-of-range inputs.
 - **Two emulator instrumentation tests:** encrypted Keystore-backed pairing-key round trip; and a full notification lifecycle against an isolated socket peer. The lifecycle posts real notifications from a separate fixture APK, verifies updates and revision changes, rejects a stale dismissal, removes a notification by remote command, observes phone-side removal, refuses protected ongoing notifications, reconnects and restores the current snapshot, hides content, applies local-only dismissal, and removes filtered-out apps.
 - **Android debug and release lint:** passed, with non-blocking dependency/style suggestions.
-- **Signed/R8-shrunk release APK:** built and verified with `apksigner`; installed separately from the debug APK for release UI smoke testing.
+- **Signed/R8-shrunk release APK:** built and verified with `apksigner`; installed separately from the debug APK for release UI smoke testing. The release pairing form rejects loopback addresses, confirming that the emulator-only transport bypass is disabled.
 - **Real emulator UI smoke checks:** home, app picker, settings, pairing sheet, and dark theme verified through UIAutomator and screenshots. The tests run against the installable release as well as the debug UI.
 - **Mac app:** release binary built and ad-hoc signed; launched successfully; settings window visually inspected and captured; no bundled non-system dylibs. Menu bar control is implemented with AppKit `NSStatusItem`.
 
