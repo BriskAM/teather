@@ -23,6 +23,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -86,6 +89,19 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
         runCatching { startActivity(intent) }.onFailure { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
     }
+    fun openNotificationAccess() {
+        val detail = if (Build.VERSION.SDK_INT >= 30) Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+            .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, ComponentName(this, NotificationBridge::class.java).flattenToString()) else null
+        if (detail != null && runCatching { startActivity(detail) }.isSuccess) return
+        if (runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }.isFailure) openAppInfo()
+    }
+    fun openAppInfo() {
+        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+    }
+    fun openConnectionNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        if (runCatching { startActivity(intent) }.isFailure) openAppInfo()
+    }
 }
 
 private object Glyphs {
@@ -110,6 +126,7 @@ private fun TeatherApp() {
     var settingsVersion by remember { mutableIntStateOf(0) }
     var dynamic by remember { mutableStateOf(prefs.dynamicColor) }
     var access by remember { mutableStateOf(false) }
+    var accessHelp by rememberSaveable { mutableStateOf(false) }
     DisposableEffect(context) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) { access = context.getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(ComponentName(context, NotificationBridge::class.java)); if (access && BridgeState.listener == null) android.service.notification.NotificationListenerService.requestRebind(ComponentName(context, NotificationBridge::class.java)); settingsVersion++ } }
         context.lifecycle.addObserver(observer)
@@ -130,14 +147,15 @@ private fun TeatherApp() {
             }
         }) { padding ->
             val changed = { settingsVersion++; BridgeState.changed() }
-            Box(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).clipToBounds()) {
                 when (tab) {
-                    0 -> Home(prefs, access, settingsVersion, { pairing = true }, { tab = 1 }, { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
+                    0 -> Home(prefs, access, settingsVersion, { pairing = true }, { tab = 1 }, { accessHelp = true })
                     1 -> AppsScreen(prefs, settingsVersion, changed)
                     2 -> FilesScreen(prefs, settingsVersion, changed)
-                    else -> SettingsScreen(prefs, access, settingsVersion, dynamic, { dynamic = it; prefs.dynamicColor = it }, changed)
+                    else -> SettingsScreen(prefs, access, settingsVersion, dynamic, { dynamic = it; prefs.dynamicColor = it }, changed, { accessHelp = true })
                 }
             }
+            if (accessHelp) NotificationAccessDialog(access, { accessHelp = false })
             if (context.showBatteryPrompt) AlertDialog(
                 onDismissRequest = { context.showBatteryPrompt = false; prefs.batteryPromptSeen = true },
                 title = { Text("Keep Teather reachable?") },
@@ -148,6 +166,28 @@ private fun TeatherApp() {
             if (pairing) PairSheet(prefs, { pairing = false }, { settingsVersion++; pairing = false; context.stopService(Intent(context, ConnectionService::class.java)); context.connect() })
         }
     }
+}
+
+@Composable
+private fun NotificationAccessDialog(access: Boolean, dismiss: () -> Unit) {
+    val context = LocalActivity.current as MainActivity
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text(if (access) "Notification access" else "Connect your notifications") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Notification access lets Teather read notifications and dismiss them on your behalf. Only apps you select are sent to your paired Mac over Tailscale.")
+                if (Build.VERSION.SDK_INT >= 33) {
+                    Text("If Android blocks access", style = MaterialTheme.typography.titleSmall)
+                    Text("For an APK install, Android may show ‘Restricted setting’. First try enabling access in Notification settings. Then open App info → ⋮ → Allow restricted settings, confirm with your screen lock, and return to enable notification access. The menu appears only when Android has restricted the app; labels vary by phone.")
+                    OutlinedButton(onClick = { context.openAppInfo() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Open App info") }
+                }
+                Text("This is separate from permission to show Teather’s own connection notification.", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton(onClick = { dismiss(); context.openNotificationAccess() }) { Text("Notification settings") } },
+        dismissButton = { TextButton(onClick = dismiss) { Text("Later") } }
+    )
 }
 
 @Composable
@@ -182,7 +222,7 @@ private fun Home(prefs: Preferences, access: Boolean, version: Int, pair: () -> 
                     Spacer(Modifier.height(12.dp))
                     Text(if (connected) "$count active notifications mirrored" else "A private bridge from Android to Mac.\nPowered by your Tailscale network.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(20.dp))
-                    Button(onClick = { if (prefs.host.isBlank()) pair() else if (running) context.stopService(Intent(context, ConnectionService::class.java)) else context.connect() }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Button(onClick = { if (prefs.host.isBlank()) pair() else if (running) context.stopService(Intent(context, ConnectionService::class.java)) else context.connect() }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                         Text(if (prefs.host.isBlank()) "Connect your Mac" else if (running) "Disconnect" else "Start syncing", fontSize = 16.sp); Spacer(Modifier.width(12.dp)); Icon(Glyphs.Arrow, null, Modifier.size(20.dp))
                     }
                 }
@@ -191,7 +231,7 @@ private fun Home(prefs: Preferences, access: Boolean, version: Int, pair: () -> 
         if (!access) item { InfoCard(Glyphs.Bell, "Let notifications through", "Choose Teather in Android’s notification access settings.", "Allow access", grant) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("YOUR APPS", "${prefs.enabledApps.size}", "Only what you choose", Modifier.weight(1f).clickable(onClick = apps))
+                StatCard("YOUR APPS", "${prefs.enabledApps.size}", "Only what you choose", Modifier.weight(1f), apps)
                 StatCard("CONNECTION", "Tailscale", "Encrypted in transit", Modifier.weight(1f))
             }
         }
@@ -229,8 +269,9 @@ private fun DeviceArt(connected: Boolean) {
 }
 
 @Composable
-private fun StatCard(label: String, value: String, caption: String, modifier: Modifier) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(24.dp)) {
+private fun StatCard(label: String, value: String, caption: String, modifier: Modifier, click: (() -> Unit)? = null) {
+    val shape = RoundedCornerShape(24.dp)
+    Surface(modifier = if (click != null) modifier.clip(shape).clickable(onClick = click) else modifier, color = MaterialTheme.colorScheme.surfaceContainer, shape = shape) {
         Column(Modifier.padding(18.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             Spacer(Modifier.height(12.dp)); Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -245,7 +286,8 @@ private fun InfoCard(icon: ImageVector, title: String, body: String, action: Str
         Column(Modifier.padding(20.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary); Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
             Spacer(Modifier.height(10.dp)); Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = click, contentPadding = PaddingValues(top = 12.dp, end = 12.dp)) { Text(action); Spacer(Modifier.width(8.dp)); Icon(Glyphs.Arrow, null, Modifier.size(16.dp)) }
+            Spacer(Modifier.height(12.dp))
+            TextButton(onClick = click, modifier = Modifier.heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) { Text(action); Spacer(Modifier.width(8.dp)); Icon(Glyphs.Arrow, null, Modifier.size(16.dp)) }
         }
     }
 }
@@ -284,10 +326,10 @@ private fun AppsScreen(prefs: Preferences, version: Int, changed: () -> Unit) {
         items(filtered, key = { it.id }) { app ->
             Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).toggleable(value = app.id in enabled, role = Role.Switch, onValueChange = { prefs.enabledApps = if (it) prefs.enabledApps + app.id else prefs.enabledApps - app.id; changed() }).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         if (app.icon != null) Image(app.icon, null, Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)))
                         Column(Modifier.weight(1f)) { Text(app.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(if (app.id in enabled) "Mirroring to Mac" else "Stays on your phone", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        Switch(checked = app.id in enabled, onCheckedChange = { prefs.enabledApps = if (it) prefs.enabledApps + app.id else prefs.enabledApps - app.id; changed() }, modifier = Modifier.semantics { contentDescription = "Mirror ${app.name}" })
+                        Switch(checked = app.id in enabled, onCheckedChange = null)
                     }
                     if (app.id in enabled) TextButton(onClick = { prefs.localOnlyApps = if (app.id in local) prefs.localOnlyApps - app.id else prefs.localOnlyApps + app.id; changed() }) { Text(if (app.id in local) "Mac dismissals stay on Mac" else "Dismiss on both devices", style = MaterialTheme.typography.labelMedium) }
                 }
@@ -360,7 +402,7 @@ private fun FilesScreen(prefs: Preferences, version: Int, changed: () -> Unit) {
 }
 
 @Composable
-private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dynamic: Boolean, setDynamic: (Boolean) -> Unit, changed: () -> Unit) {
+private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dynamic: Boolean, setDynamic: (Boolean) -> Unit, changed: () -> Unit, notificationAccess: () -> Unit) {
     val context = LocalActivity.current as MainActivity
     var hide by remember { mutableStateOf(prefs.hideContent) }
     var sound by remember { mutableStateOf(prefs.sound) }
@@ -372,7 +414,10 @@ private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dy
         item { Spacer(Modifier.height(14.dp)); SectionLabel("APPEARANCE") }
         item { SettingToggle("Wallpaper colors", "Use your phone’s palette. Light and dark follow your system.", dynamic, setDynamic) }
         item { Spacer(Modifier.height(14.dp)); SectionLabel("CONNECTION HEALTH") }
-        item { InfoCard(Glyphs.Bell, if (access) "Notification access is on" else "Notification access is off", "Teather needs access to mirror and dismiss your selected notifications.", "Open Android settings") { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) } }
+        item { InfoCard(Glyphs.Bell, if (access) "Notification access is on" else "Notification access is off", "Teather needs access to mirror and dismiss your selected notifications.", "Set up notification access", notificationAccess) }
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            item { InfoCard(Glyphs.Bell, "Connection notification is off", "This permission shows Teather’s own running status. To read notifications from other apps, set up notification access above.", "Allow connection notification") { context.openConnectionNotificationSettings() } }
+        }
         item {
             val exempt = context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
             InfoCard(Glyphs.Link, if (exempt) "Background access allowed" else "Keep the connection available", "Optional: exempt Teather from battery optimization for more reliable background access. This does not reduce battery use. Keep Tailscale connected too.", if (exempt) "App battery settings" else "Allow background access") {
@@ -383,16 +428,16 @@ private fun SettingsScreen(prefs: Preferences, access: Boolean, version: Int, dy
             val intent = context.packageManager.getLaunchIntentForPackage("com.tailscale.ipn")
             if (intent != null) context.startActivity(intent) else context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
         } }
-        item { Text("Teather 0.2.1\nMade for fewer interruptions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp, 24.dp)) }
+        item { Text("Teather ${BuildConfig.VERSION_NAME}\nMade for fewer interruptions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp, 24.dp)) }
     }
 }
 
 @Composable private fun SectionLabel(text: String) { Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.5.sp, modifier = Modifier.padding(8.dp, 10.dp)) }
 @Composable private fun SettingToggle(title: String, caption: String, checked: Boolean, change: (Boolean) -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).toggleable(value = checked, role = Role.Switch, onValueChange = change), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(4.dp)); Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Switch(checked, change, modifier = Modifier.semantics { contentDescription = title })
+            Switch(checked, onCheckedChange = null)
         }
     }
 }
@@ -414,7 +459,7 @@ private fun PairSheet(prefs: Preferences, dismiss: () -> Unit, connect: () -> Un
             Button(onClick = {
                 error = when { !(TailnetAddress.valid(host) || (BuildConfig.DEBUG && host == "127.0.0.1")) -> "Use the 100.64–100.127 IPv4 address shown in Tailscale."; !token.matches(Regex("[a-f0-9]{64}")) -> "The pairing key should contain 64 letters and numbers."; else -> null }
                 if (error == null) runCatching { prefs.host = host; prefs.token = token; connect() }.onFailure { error = "Couldn’t securely save the key. Please try again." }
-            }, modifier = Modifier.fillMaxWidth().height(56.dp)) { Icon(Glyphs.Link, null); Spacer(Modifier.width(10.dp)); Text("Pair & start syncing", fontSize = 16.sp) }
+            }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Icon(Glyphs.Link, null); Spacer(Modifier.width(10.dp)); Text("Pair & start syncing", fontSize = 16.sp) }
             Text("Both devices must be connected to your tailnet. No public server needed.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

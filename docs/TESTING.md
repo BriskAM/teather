@@ -1,3 +1,12 @@
+# Android notification setup and touch validation — 0.2.2
+
+- Signed release built, release/debug lint and unit checks passed; the signing certificate matches the existing releases.
+- Android 15/API 35 instrumentation: `OK (5 tests)` for notification lifecycle, old-Mac compatibility, encrypted pairing and folder sharing.
+- Installed the signed release on a fresh Android 17/API 37 Google APIs arm64 emulator. Physical-coordinate UI checks passed at font scales 1.0 and 1.3: navigation labels/edges, labeled switch rows and switch edges, card-action edges, permission help, App info, and the real app-specific notification-access settings page. These tests do not auto-grant listener access. `python3 scripts/test-android-ui.py` reproduces both font passes; it restores font scale and previous listener access afterward.
+- The UI test starts a fresh app task so an Android Settings activity left above a stopped app cannot mask subsequent launches. Initial Android 15 UI automation was unstable; the signed-release touch checks above were completed on Android 17 instead.
+
+The app explains restricted-settings consent but cannot grant it. A real APK downloaded through a browser, manufacturer-specific restrictions, and the exact warning on the user's phone remain hardware acceptance checks. No global touch-coordinate offset was reproduced in the emulator; this patch fixes observed asymmetric action padding and makes switch rows tappable.
+
 # Rename validation — 0.2.1
 
 Teather is the new product/project name. This update retains installed app IDs, signing and pairing storage. Validation covers both WebDAV route names, native Finder mounting through `/Teather/`, the existing notification regression suite, release APK upgrades, and the renamed Swift package and DMG build. Older screenshots and release assets remain historical records of the Kunnect name.

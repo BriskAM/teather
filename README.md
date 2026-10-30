@@ -20,7 +20,7 @@ Your Android notifications, on your Mac. A small native companion pair using you
 
 Download `Teather-Android.apk` and `Teather-macOS-arm64.dmg` from [Releases](https://github.com/BriskAM/teather/releases).
 
-1. Install the APK on Android 9 or newer. On sideloaded apps, Android may require **App info → ⋮ → Allow restricted settings** before granting notification access.
+1. Install the APK on Android 9 or newer. Teather's notification setup links directly to its access page. If Android shows **Restricted setting**, attempt access once, then open **App info → ⋮ → Allow restricted settings**, authenticate and return to enable access. This option appears only when the APK installation is restricted. Permission to show Teather's own connection notification is separate.
 2. Open the DMG and drag `Teather.app` onto the **Applications** shortcut on an Apple Silicon Mac running macOS 13 or newer. This initial personal build is ad-hoc signed, not Apple notarized. Use macOS **Privacy & Security → Open Anyway** if Gatekeeper blocks the downloaded app.
 3. Connect both devices to the same Tailscale tailnet. Your tailnet policy must allow the phone to reach the Mac on **TCP port 41691**. No exit node or Tailscale Serve setup is required.
 4. Open Teather from the Mac menu bar and allow notifications. Copy the Mac's **Tailscale IPv4** (`100.64.x.x`–`100.127.x.x`) from Tailscale if it is not detected automatically, plus the pairing key from Teather.
@@ -93,6 +93,7 @@ Back up **both** `~/.local/share/kunnect/release.keystore` and ignored `android/
 
 # Start an Android emulator, then:
 ./scripts/test-android.sh
+python3 scripts/test-android-ui.py
 python3 scripts/capture-android.py
 
 # On Mac, exercise a real native volume backed by the emulator:
