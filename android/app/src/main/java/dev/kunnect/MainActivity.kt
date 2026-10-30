@@ -21,6 +21,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -317,7 +319,7 @@ private fun PairSheet(prefs: Preferences, dismiss: () -> Unit, connect: () -> Un
     var visible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = dismiss) {
-        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Meet your Mac.", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
             Text("Open Kunnect in your Mac’s menu bar. Copy its Tailscale IPv4 address and pairing key here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(host, { host = it.trim(); error = null }, label = { Text("Mac’s Tailscale IPv4") }, placeholder = { Text("100.x.x.x") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())

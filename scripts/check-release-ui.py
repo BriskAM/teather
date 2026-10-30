@@ -17,9 +17,10 @@ def tap(text): press(next(n for n in tree().iter('node') if n.get('text') == tex
 tap('Connect your Mac')
 fields = [n for n in tree().iter('node') if n.get('class') == 'android.widget.EditText']
 press(fields[0]); run('shell','input','text','127.0.0.1')
-# Synthetic test key; it never leaves the pairing form because host validation fails.
-press(fields[1]); run('shell','input','text','a'*64)
-run('shell','input','keyevent','KEYCODE_BACK')
+# Host validation runs first; leaving the key empty avoids handling real credentials.
+# Scroll the form if the software keyboard reduces the available space.
+if not any(n.get('text') == 'Pair & start syncing' for n in tree().iter('node')):
+    run('shell','input','swipe','540','1450','540','600','400')
 tap('Pair & start syncing')
 assert any('Use the 100.64' in n.get('text','') for n in tree().iter('node')), 'Release must reject loopback'
 run('shell','input','keyevent','KEYCODE_BACK')
